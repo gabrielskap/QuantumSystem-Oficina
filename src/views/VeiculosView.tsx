@@ -149,11 +149,6 @@ export const VeiculosView: React.FC = () => {
   const [renavam, setRenavam] = useState('');
   const [quilometragem, setQuilometragem] = useState<number>(0);
 
-  // Client searchable autocomplete states
-  const [clientSearchText, setClientSearchText] = useState('');
-  const [showClientSuggestions, setShowClientSuggestions] = useState(false);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
-
   // Form errors
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -169,7 +164,6 @@ export const VeiculosView: React.FC = () => {
       if (prefilledClient) {
         resetForm();
         setClienteId(prefilledClienteId);
-        setClientSearchText(prefilledClient.nome);
         setIsFormOpen(true);
       }
       // Reset back to empty to avoid infinite loops on view switches
@@ -177,24 +171,12 @@ export const VeiculosView: React.FC = () => {
     }
   }, [prefilledClienteId, clientes, setPrefilledClienteId]);
 
-  // Click outside to close client suggestions list
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
-        setShowClientSuggestions(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   // Unique list of vehicle brands for the search filters
   const uniqueBrands = Array.from(new Set(veiculos.map(v => v.marca))).sort();
 
   // Reset form helper
   const resetForm = () => {
     setClienteId('');
-    setClientSearchText('');
     setPlaca('');
     setMarca('');
     setModelo('');
@@ -215,9 +197,6 @@ export const VeiculosView: React.FC = () => {
   const handleEdit = (veiculo: Veiculo) => {
     setEditingVeiculo(veiculo);
     setClienteId(veiculo.clienteId);
-    
-    const linkedClient = clientes.find(c => c.id === veiculo.clienteId);
-    setClientSearchText(linkedClient ? linkedClient.nome : '');
     
     // License plate might be saved with or without hyphen; format it nicely for input masking
     setPlaca(formatPlaca(veiculo.placa));
@@ -349,11 +328,7 @@ export const VeiculosView: React.FC = () => {
     resetForm();
   };
 
-  // Autocomplete client suggestions filter
-  const matchingClients = clientSearchText.trim() === '' ? [] : clientes.filter(c => 
-    c.nome.toLowerCase().includes(clientSearchText.toLowerCase()) ||
-    c.documento.replace(/\D/g, '').includes(clientSearchText.replace(/\D/g, ''))
-  );
+
 
   // Combine searches & filters
   const combinedSearch = (searchQuery || localSearch).toLowerCase().trim();
@@ -603,112 +578,40 @@ export const VeiculosView: React.FC = () => {
             {/* Modal Body / Form */}
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               
-              {/* Seção 1: Proprietário (searchable autocomplete) */}
+              {/* Seção 1: Proprietário (select input) */}
               <div className="space-y-4">
                 <h4 className="text-xs font-bold text-[#0F4C5C] uppercase tracking-wider border-l-4 border-l-[#0F4C5C] pl-2">
                   1. Associação de Proprietário
                 </h4>
                 
-                <div className="relative" ref={suggestionsRef}>
-                  <label htmlFor="form-cliente-autocomplete" className="block text-xs font-bold text-gray-700 mb-1.5">
+                <div>
+                  <label htmlFor="form-cliente-select" className="block text-xs font-bold text-gray-700 mb-1.5">
                     Proprietário do Automóvel *
                   </label>
                   
-                  {clienteId ? (
-                    /* Selected customer box */
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center font-bold text-xs">
-                          <Check size={16} />
-                        </div>
-                        <div>
-                          {(() => {
-                            const selectedClientObj = clientes.find(c => c.id === clienteId);
-                            return (
-                              <>
-                                <span className="font-bold text-gray-800 text-sm">
-                                  {selectedClientObj ? selectedClientObj.nome : 'Cliente selecionado'}
-                                </span>
-                                <span className="block text-xs font-mono text-gray-500">
-                                  {selectedClientObj ? `Documento: ${selectedClientObj.documento}` : ''}
-                                </span>
-                              </>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setClienteId('');
-                          setClientSearchText('');
-                        }}
-                        className="text-xs bg-white hover:bg-gray-50 text-gray-600 font-bold py-1 px-2.5 border border-gray-300 rounded-md transition-colors cursor-pointer"
-                        style={{ minHeight: '32px' }}
-                      >
-                        Trocar Cliente
-                      </button>
-                    </div>
-                  ) : (
-                    /* Search input */
-                    <>
-                      <div className="relative">
-                        <input
-                          id="form-cliente-autocomplete"
-                          type="text"
-                          placeholder="Digite o nome do cliente para buscar..."
-                          value={clientSearchText}
-                          onChange={(e) => {
-                            setClientSearchText(e.target.value);
-                            setShowClientSuggestions(true);
-                          }}
-                          onFocus={() => setShowClientSuggestions(true)}
-                          className={`w-full text-sm border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-[#0F4C5C] ${
-                            formErrors.clienteId ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                          autoComplete="off"
-                        />
-                        <div className="absolute right-3 top-3 text-gray-400">
-                          <Search size={16} />
-                        </div>
-                      </div>
-
-                      {/* Suggestions list dropdown */}
-                      {showClientSuggestions && clientSearchText.trim() !== '' && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto divide-y divide-gray-100">
-                          {matchingClients.length === 0 ? (
-                            <div className="p-3 text-xs text-gray-400 italic">Nenhum cliente cadastrado corresponde à sua busca.</div>
-                          ) : (
-                            matchingClients.map(c => (
-                              <button
-                                key={c.id}
-                                type="button"
-                                onClick={() => {
-                                  setClienteId(c.id);
-                                  setClientSearchText(c.nome);
-                                  setShowClientSuggestions(false);
-                                  setFormErrors(prev => {
-                                    const copy = { ...prev };
-                                    delete copy.clienteId;
-                                    return copy;
-                                  });
-                                }}
-                                className="w-full text-left p-3 hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer"
-                              >
-                                <div>
-                                  <span className="block text-sm font-bold text-gray-800">{c.nome}</span>
-                                  <span className="block text-xs font-mono text-gray-400">Doc: {c.documento}</span>
-                                </div>
-                                <span className="text-[10px] bg-gray-100 text-gray-500 font-bold uppercase py-0.5 px-1.5 rounded">
-                                  {c.tipo}
-                                </span>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </>
-                  )}
+                  <select
+                    id="form-cliente-select"
+                    value={clienteId}
+                    onChange={(e) => {
+                      setClienteId(e.target.value);
+                      setFormErrors(prev => {
+                        const copy = { ...prev };
+                        delete copy.clienteId;
+                        return copy;
+                      });
+                    }}
+                    className={`w-full text-sm border rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-[#0F4C5C] ${
+                      formErrors.clienteId ? 'border-red-500 bg-red-50/50' : 'border-gray-300'
+                    }`}
+                  >
+                    <option value="">-- Selecione o proprietário --</option>
+                    {[...clientes].sort((a, b) => a.nome.localeCompare(b.nome)).map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.nome} ({c.documento})
+                      </option>
+                    ))}
+                  </select>
+                  
                   {formErrors.clienteId && (
                     <span className="text-xs text-red-600 font-semibold mt-1 block">{formErrors.clienteId}</span>
                   )}
