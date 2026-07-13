@@ -1,0 +1,6 @@
+{
+  "name": "OficinaPro",
+  "description": "Sistema completo de gestão para oficina mecânica, cobrindo clientes, veículos, ordens de serviço, orçamentos, estoque, vendas, recibos e notas fiscais.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
