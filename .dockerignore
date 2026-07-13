@@ -4,7 +4,6 @@ dist
 .github
 Dockerfile
 Dokerfile
-nginx.conf
 .dockerignore
 npm-debug.log*
 yarn-debug.log*
